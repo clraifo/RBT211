@@ -5,55 +5,47 @@
  * Author : casey.raiford
  */ 
 
-#ifndef F_CPU			//check whether CPU clock is defined
-#define F_CPU 16000000UL 	//assign 16mHz if it is not
-#endif				//closes the if/define loop
+#ifndef F_CPU
+#define F_CPU 16000000UL 
+#endif
 
-#include <avr/io.h>		//AVR I/O library
-#include <util/delay.h>		//Library that allows use of delay function
-#include <avr/interrupt.h>	//Library that allows use of interrupts
+#include <avr/io.h>
+#include <util/delay.h>	
+#include <avr/interrupt.h>
 
 int main(void)
 {
-  	DDRB |= (1 << PB5) | (1 << PB0);	//Port B data direction register = 00100001
-  
-  	DDRD &= ~(1 << PD2);			//sets PD2 to an input pin
-  	PORTD |= (1 << PD2);			//sets PD2 to HIGH, making it a pullup resistor
+    DDRB |= (1 << PB5) | (1 << PB0); // Port B data direction register = 0b00100001
+    DDRD &= ~(1 << PD2); // Sets PD2 to an input pin
+    PORTD |= (1 << PD2); // Sets PD2 to HIGH, making it a pull-up resistor
+    DDRD |= (1 << PD7); // Set pin PD7 as output
 
-  	EICRA |= (1 << ISC00);	//sets the ISC00 bit to one, configures it 
-  				//to be triggered on the fallieng edge of INT0
+    EICRA |= (1 << ISC00); // Trigger INT0 on any edge (falling and rising)
+    EICRA &= ~(1 << ISC01);
 
-  	EIMSK |= (1 << INT0);	// sets the INT0 bit in the EIMSK register to 1. 
-  				//This will enable the INT0 interrupt.
+    EIMSK |= (1 << INT0); // Sets the INT0 bit in the EIMSK register to 1. This will enable the INT0 interrupt.
 
-	sei();			//sets external interrupts. Specifies? I forget the s word.
+    sei(); // Enables global interrupts
 	     
-  while (1) 			//kicks off a loop to blink the onboard LED
-  {
-   
-	  PORTB ^= (1 << PB5); 	// LED toggler, flips every half second per the delay
-	  
-	  _delay_ms(500); 	// Delay for 500 milliseconds
-    
-  	} 
-	return(0);
+    while (1) // Kicks off a loop to blink the external LED
+    {
+        PORTD ^= (1 << PD7); // LED toggler, flips every half second per the delay
+        _delay_ms(500); // Delay for 500 milliseconds
+    } 
+
+    return(0);
 }
 
-/*
-ISR(INT0_vect){				//Interrupt Service Routine starts here
-  
-  if (!(PIND & (1 << PD2))){ 		//reads whether PD2 is LOW
-      PORTB |= (1 << PB5);		//writes the onboard LED to HIGH if it is
-      
-    } else if (PIND & (1 << PD2)){ 	//reads whether PD2 is HIGH
-      	PORTB &= ~(1 << PB5);		//writes the onboard LED to LOW if it is
-      
-    }else{
-          //left empty			//I'm not entirely clear why this is here, maybe in case the pin is neither HIGH/LOW?
-  	}
-              
-}
-               
-*/
-	
 
+
+ISR(INT0_vect) // Interrupt Service Routine starts here
+{ 
+	if (!(PIND & (1 << PD2))) // Reads whether PD2 is LOW
+	{
+		PORTB |= (1 << PB5); // Writes the onboard LED to HIGH if it is
+	} 
+	else 
+	{
+		PORTB &= ~(1 << PB5); // Writes the onboard LED to LOW if PD2 is HIGH
+	}
+}
