@@ -1,9 +1,6 @@
-/*
- * External_Interrupts.c
- *
+/* External_Interrupts.c
  * Created: 6/20/2023 6:25:28 PM
- * Author : casey.raiford
- */ 
+ * Author : casey.raiford */ 
 
 #ifndef F_CPU
 #define F_CPU 16000000UL 
@@ -35,8 +32,6 @@ int main(void)
 
     return(0);
 }
-
-
 
 ISR(INT0_vect) // Interrupt Service Routine starts here
 { 
