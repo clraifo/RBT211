@@ -1,53 +1,49 @@
-/*
-Default = External LEDs steady ON and onboard LED blinking
+#define LED1 6
+#define LED2 7
+#define PIN_BUTTON 2
 
-Button pressed 1x = Onboard LED OFF, external LEDs blinking
-*/
+volatile bool button_flag = false; 
+bool led_state = false;
+unsigned long previousMillis = 0; 
+const long interval = 1000; 
 
-#define LED0 6
-#define LED1 7
-#define ONBOARD_LED 13
-#define BUTTON 2
-
-volatile byte button_flag = 0;
-
-void setup() {
-  pinMode(LED0, OUTPUT);
+void setup()
+{
   pinMode(LED1, OUTPUT);
-  pinMode(ONBOARD_LED, OUTPUT);
-  pinMode(BUTTON, INPUT_PULLUP);
-
-  // Set up Timer1 for approximately a 1-second interval.
-  TCCR1A = 0;
-  TCCR1B = _BV(WGM12) | _BV(CS12) | _BV(CS10); // CTC mode, prescaler of 1024
-  OCR1A = 15624; // approx 1 second with 16 MHz clock and 1024 prescaler
-  TIMSK1 = _BV(OCIE1A); // Enable Timer1 compare match A interrupt
+  pinMode(LED2, OUTPUT);
+  pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(PIN_BUTTON, INPUT);
   
-  attachInterrupt(digitalPinToInterrupt(BUTTON), button_ISR, RISING);
+  attachInterrupt(digitalPinToInterrupt(PIN_BUTTON), buttonPress, CHANGE);
 }
 
-void loop() {
-  // Empty loop.
-}
-
-void button_ISR() {
-  if (button_flag == 0) {
-    digitalWrite(LED0, HIGH);
-    digitalWrite(LED1, HIGH);
-    button_flag = 1;
-  } else {
-    digitalWrite(LED0, LOW);
-    digitalWrite(LED1, LOW);
-    digitalWrite(ONBOARD_LED, LOW);
-    button_flag = 0;
+void loop()
+{
+  unsigned long currentMillis = millis();
+  
+  if(currentMillis - previousMillis >= interval) {
+    previousMillis = currentMillis;
+    
+    if (button_flag) {
+      digitalWrite(LED_BUILTIN, led_state);
+    } else {
+      digitalWrite(LED1, led_state);
+      digitalWrite(LED2, !led_state);
+    }
+    
+    led_state = !led_state;
   }
 }
 
-ISR(TIMER1_COMPA_vect) {
-  if (button_flag == 0) {
-    digitalWrite(LED0, !digitalRead(LED0));
-    digitalWrite(LED1, !digitalRead(LED1));
+void buttonPress() {
+  if (digitalRead(PIN_BUTTON) == HIGH) {
+    button_flag = true;
+    digitalWrite(LED1, HIGH);
+    digitalWrite(LED2, HIGH);
   } else {
-    digitalWrite(ONBOARD_LED, !digitalRead(ONBOARD_LED));
+    button_flag = false;
+    digitalWrite(LED1, LOW);
+    digitalWrite(LED2, LOW);
+    digitalWrite(LED_BUILTIN, LOW);
   }
 }
