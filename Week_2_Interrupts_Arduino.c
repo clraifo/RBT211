@@ -1,3 +1,9 @@
+/*
+Default = External LEDs steady ON and onboard LED blinking
+
+Button pressed 1x = Onboard LED OFF, external LEDs blinking
+*/
+
 #define LED0 6
 #define LED1 7
 #define ONBOARD_LED 13
