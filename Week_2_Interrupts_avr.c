@@ -79,21 +79,41 @@ int main(void)
     return(0);
 }
 
-ISR(TIMER1_COMPA_vect) {
-    if (button_flag == 0) {
-        PORTD ^= (1 << LED0) | (1 << LED1); 
-    } else {
-        PORTB ^= (1 << ONBOARD_LED);
+ISR(TIMER1_COMPA_vect) {            // Interrupt Service Routine for the Timer1 Compare A vector. Is called whenever Timer1 
+                                    //reaches the value in OCR1A, triggering an interrupt.
+
+    if (button_flag == 0) {         // Checks if the button_flag is equal to zero. Zero == the button is not pressed.
+
+        PORTD ^= (1 << LED0) | (1 << LED1);   // Toggles the state of the LED0 and LED1. The '^=' operation is a bitwise XOR that
+                                               // will flip the specific bits corresponding to the LED0 and LED1 pins in the PORTD register.
+                                               // As a result, if an LED was on it turns off, and if it was off it turns on. Since these LEDs 
+                                               // were setup to blink alternately, this operation ensures that when one is on, the other is off.
+                                               // They swap states with each timer tick.
+
+    } else {                             // If the button_flag is not zero, it means the button is currently being pressed.
+
+        PORTB ^= (1 << ONBOARD_LED);    // Toggles the state of the onboard LED. This makes the onboard LED blink when the button is pressed.
     }
 }
 
-ISR(INT0_vect){
-    if (button_flag == 0){
-        PORTD |= (1 << LED0) | (1 << LED1);
-        button_flag = 1;
-    } else {
-        PORTD &= ~((1 << LED0) | (1 << LED1));
-        PORTB &= ~(1 << ONBOARD_LED);
-        button_flag = 0;
+
+ISR(INT0_vect){                          // TInterrupt Service Routine INT0. Called whenever a change on the pin attached to INT0 
+                                         // (button press/release) is detected.
+
+    if (button_flag == 0){               // Button_flag zero == the button was not previously pressed.
+
+        PORTD |= (1 << LED0) | (1 << LED1);   // Turns on both external LEDs (LED0 and LED1) by setting the LED0 & LED1 bits in PORTD to 1. 
+
+        button_flag = 1;                 // Sets the button_flag to 1, indicating that the button is now pressed.
+
+    } else {                             // If the button_flag is not zero == the button was previously pressed and has now been released.
+
+        PORTD &= ~((1 << LED0) | (1 << LED1)); // Turns off both external LEDs (LED0 and LED1) using the bitwise NOT operator. This clears
+                                               // the specific bits in the PORTD register, causing both LEDs to turn off.
+
+        PORTB &= ~(1 << ONBOARD_LED);           // Turns off the onboard LED using bitwise NOT. 
+
+        button_flag = 0;                        // Resets the button_flag to 0, indicating that the button is not currently pressed.
     }
 }
+
