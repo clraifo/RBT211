@@ -43,30 +43,32 @@ volatile uint8_t button_flag = 0;    //declares a volatile variable as an unisgn
 
 int main(void)
 {
-    DDRD |= (1 << LED0) | (1 << LED1);     //sets LED0 and LED1 to output
-    DDRB |= (1 << ONBOARD_LED);            //sets PB5 to output
-    DDRD &= ~(1 << BUTTON);                //sets PD2 to a pullup resistor
+    DDRD |= (1 << LED0) | (1 << LED1);     //sets LED0/PD6 and LED1/PD7 to output
+    DDRB |= (1 << ONBOARD_LED);            //sets ONBOARD_LED/PB5 to output
+    DDRD &= ~(1 << BUTTON);                //sets BUTTON/PD2 to a pullup resistor
     PORTD |= (1 << BUTTON);                
 
     TCCR1A = 0;             //Sets the Timer/Counter Control Register A to 0, disables all features controlled by TCCR1A, leaves 
-                            //it in a simple counting mode
+                            //it in a simple counting mode. TCCR1A is in 15.11.1 in the datasheet.
     
     TCCR1B = (1 << WGM12) | (1 << CS12) | (1 << CS10);  // Sets specific bits in the Timer/Counter Control Register B to control 
                                                         // the operation of Timer1. This sets bits for Clock Select, which  control 
                                                         // the prescaler for Timer1. By setting CS12 and CS10 (and leaving CS11 
-                                                        // unset), it sets a prescaler of 1024
+                                                        // unset), it sets a prescaler of 1024. TCCR1B is in 15.11.2 in the datasheet.
                                                         
     TIMSK1 = (1 << OCIE1A);         // Sets Output Compare Interrupt Enable 1 A bit (OCIE1A) in the Timer/Counter Interrupt Mask (TIMSK) Register 
                                     // This enables the Output Compare A Match interrupt for Timer1, which is triggered whenever the timer 
-                                    // value matches the value stored in OCR1A (below). 
+                                    // value matches the value stored in OCR1A (below).  TIMSK! is in 15.11.8 in the datasheet.
     
     OCR1A = 15624;                  //Output Compare Register A (OCR1A) for Timer1 to 15624, which takes one second to hit at 16mHz
+                                    //OCR1A is in 1701104 in the datasheet.
 
     EICRA = (1 << ISC01) | (1 << ISC00);     // Sets the ISC01 and ISC00 bits of the External Interrupt Control Register A to 1.
                                              // This defines the trigger condition for INT0 (below) to its rising edge (LOW to HIGH)
+                                             //EICRA is in 12.2.1 in the datasheet.
     
     EIMSK = (1 << INT0);             // Sets  EIMSK register INT0 to 1, which enbales external interrupts and triggers EICRA (above)
-                                     // when the defined condition (rising edge, defined in AICRA above) is met
+                                     // when the defined condition (rising edge, defined in AICRA above) is met. EIMSK is in 12.2.2 in the datasheet.
 
     sei();
     
