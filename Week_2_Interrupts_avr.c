@@ -58,7 +58,7 @@ int main(void)
                                                         
     TIMSK1 = (1 << OCIE1A);         // Sets Output Compare Interrupt Enable 1 A bit (OCIE1A) in the Timer/Counter Interrupt Mask (TIMSK) Register 
                                     // This enables the Output Compare A Match interrupt for Timer1, which is triggered whenever the timer 
-                                    // value matches the value stored in OCR1A (below).  TIMSK! is in 15.11.8 in the datasheet.
+                                    // value matches the value stored in OCR1A (below).  TIMSK1 is in 15.11.8 in the datasheet.
     
     OCR1A = 15624;                  //Output Compare Register A (OCR1A) for Timer1 to 15624, which takes one second to hit at 16mHz
                                     //OCR1A is in 1701104 in the datasheet.
