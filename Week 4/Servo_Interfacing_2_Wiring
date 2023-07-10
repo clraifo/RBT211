@@ -1,0 +1,42 @@
+**Servo Motor**
+Connect the control wire of the servo motor to the OC1A output, which is pin 
+PB1 or digital pin 9 on the Arduino Uno R3.
+
+**Push Button**
+Connect one terminal of the push button to digital pin PD2 or digital pin 2 
+on the Arduino Uno R3. Connect the other terminal of the push button to GND.
+
+**Potentiometer**
+Connect one of the outer terminals of the potentiometer to 5V. Connect the 
+other outer terminal to GND. Connect the middle terminal, which is the wiper, to the ADC0 input, 
+which is pin PC0 or analog pin A0 on the Arduino Uno R3.
+
+Here are the detailed instructions:
+
+- Servo Motor:
+  - The servo motor has three wires: power (usually red), ground (usually black or brown), and 
+    signal (usually yellow or white).
+  - Connect the power wire to the 5V pin on the Arduino.
+  - Connect the ground wire to one of the GND pins on the Arduino.
+  - Connect the signal wire to digital pin 9 (PB1/OC1A) on the Arduino.
+
+- Push Button:
+  - The push button has two terminals.
+  - Connect one terminal to digital pin 2 (PD2) on the Arduino.
+  - Connect the other terminal to a GND pin on the Arduino.
+  - When the button is pressed, it will connect digital pin 2 to ground. Since the internal pull-up 
+resistor is enabled for this pin in the code, the pin will normally read as `HIGH` and will read 
+as `LOW` when the button is pressed.
+
+- Potentiometer:
+  - The potentiometer has three terminals: two end terminals and one middle terminal (the wiper).
+  - Connect one of the end terminals to the 5V pin on the Arduino.
+  - Connect the other end terminal to a GND pin on the Arduino.
+  - Connect the middle terminal to analog pin A0 (PC0/ADC0) on the Arduino.
+  - The potentiometer acts as a voltage divider, and the voltage at the wiper will vary between 
+0V and 5V as you turn the knob. This voltage is read by the ADC to determine the delay between 
+servo movements.
+
+Always remember to turn off the power supply while you are wiring to prevent any accidental short 
+circuits or other issues. Once you have made all the connections, you can turn on the power supply 
+and upload the program to the Arduino.
