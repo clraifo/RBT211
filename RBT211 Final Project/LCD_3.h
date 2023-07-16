@@ -1,90 +1,75 @@
 /*
-LCD_3.h code overview :
+The `lcd.h` file is a header file that contains the declarations for the functions and macros used to control a 16x2 LCD display with an AVR microcontroller. 
+Here is a brief description of its contents:
 
-**Library Dependencies
-This library just has stdint.h, which provides definitions for fixed-size integer types
+1. **Macro Definitions**: The file begins by defining several macros for LCD control. These macros include definitions for the data and control ports and 
+pins used to interface with the LCD (`LCD_DATA_DDR`, `LCD_DATA_PORT`, `LCD_CONTROL_DDR`, `LCD_CONTROL_PORT`, `RS`, `E`), and definitions for various LCD 
+commands (`LCD_DISP_ON`, `LCD_DISP_OFF`, etc.) that are used to control the operation of the LCD.
 
-**Pin Definitions
-The code defines the pins connected to the LCD module using macros. These definitions specify the data and control pins of the LCD 
-module that are connected to the microcontroller.
+2. **Function Declarations**: The file declares several functions for interacting with the LCD:
+   - `lcd_init()`: This function initializes the LCD.
+   - `lcd_command(unsigned char cmnd)`: This function sends a command to the LCD.
+   - `lcd_data(unsigned char data)`: This function sends data to the LCD.
+   - `lcd_puts(const char *s)`: This function displays a string on the LCD.
+   - `lcd_gotoxy(unsigned char x, unsigned char y)`: This function moves the cursor to the specified position on the LCD.
+   - `lcd_clrscr()`: This function clears the LCD screen.
 
-**Function Prototypes
-The code declares function prototypes for various LCD operations. These functions include initializing the LCD module, sending 
-commands to the LCD, sending data to the LCD, and controlling the cursor position.
-
-**Command Definitions
-The code defines various commands used to control the LCD module. These commands are specific instructions sent to the LCD to 
-perform various operations, such as clearing the display, turning on/off the display, and shifting the cursor.
-
-Function Definitions
-**The code provides inline function definitions for the LCD operations. These functions are implemented using the defined pin 
-connections and AVR I/O operations. They encapsulate the low-level details of interfacing with the LCD module.
-
+These functions are defined in the `lcd.c` file, and they are used in the main program to control the LCD.tions and AVR I/O operations. They encapsulate the 
+low-level details of interfacing with the LCD module.
 */
 
-#ifndef LCD_H
-#define LCD_H
+/*
+ * lcd.h
+ *
+ * Created: 7/16/2023 2:48:38 PM
+ *  Author: casey
+ */ 
+#ifndef LCD_H_
+#define LCD_H_
 
-#include <stdint.h>
+#include <avr/io.h>
 
-// LCD pin configuration
-#define LCD_RS_PIN     7   // Register Select
-#define LCD_EN_PIN     8   // Enable
-#define LCD_DATA_PORT  PORTB   // Data port
-#define LCD_DATA_DIR   DDRB    // Data direction register
+#define LCD_DATA_DDR DDRD
+#define LCD_DATA_PORT PORTD
+#define LCD_CONTROL_DDR DDRD
+#define LCD_CONTROL_PORT PORTD
+#define RS PD2
+#define E PD3
 
-// LCD command codes
-#define LCD_CMD_CLEAR_DISPLAY   0x01
-#define LCD_CMD_RETURN_HOME     0x02
-#define LCD_CMD_ENTRY_MODE      0x04
-#define LCD_CMD_DISPLAY_CTRL    0x08
-#define LCD_CMD_SHIFT           0x10
-#define LCD_CMD_FUNCTION_SET    0x20
-#define LCD_CMD_SET_CGRAM_ADDR  0x40
-#define LCD_CMD_SET_DDRAM_ADDR  0x80
+#define LCD_DISP_ON 0x0C // Display on
+#define LCD_DISP_OFF 0x08 // Display off
+#define LCD_DISP_ON_CURSOR 0x0E // Display on, cursor on
+#define LCD_DISP_ON_BLINK 0x0F // Display on, cursor off, blink on
+#define LCD_DISP_ON_CURSOR_BLINK 0x0F // Display on, cursor on, blink on
+#define LCD_HOME 0x02 // Move cursor to home position
+#define LCD_ENTRY_MODE 0x06 // Shift cursor from left to right on read/write
+#define LCD_FUNCTION_RESET 0x30 // Reset the LCD
+#define LCD_FUNCTION_4BIT_2LINES 0x28 // 4-bit data, 2-line display, 5 x 7 font
+#define LCD_SET_CURSOR 0x80 // Set cursor position
+#define LCD_CURSOR_ON 0x0E // Cursor ON
+#define LCD_CURSOR_OFF 0x0C // Cursor OFF
+#define LCD_BLINK_CURSOR_ON 0x0D // Cursor blink ON
+#define LCD_BLINK_CURSOR_OFF 0x0C // Cursor blink OFF
+#define LCD_MOVE_CURSOR_LEFT 0x10 // Move cursor left without changing display data RAM
+#define LCD_MOVE_CURSOR_RIGHT 0x14 // Move cursor right without changing display data RAM
+#define LCD_TURN_ON 0x0C // Turn Lcd display on
+#define LCD_TURN_OFF 0x08 // Turn Lcd display off
+#define LCD_SHIFT_LEFT 0x18 // Shift display left without changing display data RAM
+#define LCD_SHIFT_RIGHT 0x1C // Shift display right without changing display data RAM
+#define LCD_RETURN_HOME 0x02 // Sets DDRAM address 0 in address counter. Also returns display from being shifted to original position. DDRAM contents remain unchanged.
+#define LCD_CLR 0x01
 
-// LCD function set options
-#define LCD_FUNCTION_8BIT		0x10
-#define LCD_FUNCTION_4BIT		0x00
-#define LCD_FUNCTION_2LINE		0x08
-#define LCD_FUNCTION_1LINE		0x00
-#define LCD_FUNCTION_5X10FONT   0x04
-#define LCD_FUNCTION_5X8FONT    0x00
+#define LCD_CLEAR 0x01 // Clear LCD
 
-// LCD display control options
-#define LCD_DISPLAY_ON			0x04
-#define LCD_DISPLAY_OFF			0x00
-#define LCD_CURSOR_ON			0x02
-#define LCD_CURSOR_OFF			0x00
-#define LCD_BLINK_ON			0x01
-#define LCD_BLINK_OFF			0x00
+#define LCD_LINE_1 0x80 // Start of line 1
+#define LCD_LINE_2 0xC0 // Start of line 2
 
-// LCD entry mode options
-#define LCD_ENTRY_INC			0x02
-#define LCD_ENTRY_DEC			0x00
-#define LCD_ENTRY_SHIFT			0x01
-#define LCD_ENTRY_NOSHIFT		0x00
+void lcd_init(void);
+void lcd_command(unsigned char cmnd);
+void lcd_data(unsigned char data);
+void lcd_puts(const char *s);
+void lcd_gotoxy(unsigned char x, unsigned char y);
+void lcd_clrscr(void);
 
-// LCD line addresses
-#define LCD_LINE0_START			0x00
-#define LCD_LINE1_START			0x40
 
-// Function to initialize the LCD
-void LCD_init();
-
-// Function to send a command to the LCD
-void LCD_send_cmd(uint8_t cmd);
-
-// Function to send data to the LCD
-void LCD_send_data(uint8_t data);
-
-// Function to clear the LCD screen
-void LCD_clear();
-
-// Function to set the cursor position on the LCD
-void LCD_gotoxy(uint8_t x, uint8_t y);
-
-// Function to write a string to the LCD
-void LCD_puts(const char *str);
-
-#endif // LCD_H
+#endif /* LCD_H_ */
