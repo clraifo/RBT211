@@ -1,132 +1,86 @@
 /*
-LCD_#.c Overview
+The `lcd.c` file contains the definitions of the functions declared in the `lcd.h` file for controlling a 16x2 LCD display with an AVR microcontroller. 
+Here is a brief description of the contents of this file:
 
-The LCD.c library provides functions to control and communicate with an LCD (Liquid Crystal Display) module. 
+1. **Function Definitions**: The following functions are defined in this file:
 
-** LCD_send_cmd(uint8_t cmd)
-This function sends a command to the LCD module. It takes a single-byte command as an argument and performs the 
-necessary operations to send the command to the LCD.
+   - `lcd_command(unsigned char cmnd)`: This function sends a command to the LCD. The command is first divided into its upper and lower nibbles (4 bits
+   each), which are then sent to the LCD one by one.
+   - `lcd_data(unsigned char data)`: This function sends data to the LCD. Similar to the `lcd_command` function, the data is divided into upper and 
+   lower nibbles and sent one by one.
+   - `lcd_init(void)`: This function initializes the LCD. It sets the data direction registers for the LCD data and control ports, and sends several
+   commands to the LCD to initialize it and configure its settings.
+   - `lcd_gotoxy(unsigned char x, unsigned char y)`: This function moves the cursor to the specified position on the LCD.
+   - `lcd_puts(const char *s)`: This function displays a string on the LCD. It sends the characters of the string one by one using the `lcd_data` function.
+   - `lcd_clrscr()`: This function clears the LCD screen. It sends the `LCD_CLEAR` command to the LCD and then waits for the command to be processed.
 
-** LCD_send_data(uint8_t data)
-This function sends data to the LCD module. It takes a single-byte data value as an argument and sends it to the LCD.
+2. **Delay Functions**: The `_delay_us` and `_delay_ms` functions from the AVR `util/delay.h` library are used throughout this file to introduce delays 
+between certain operations. These delays are necessary because some operations on the LCD take a certain amount of time to complete, and trying to perform 
+another operation before the previous one has completed can cause errors.
 
-** LCD_init()
-This function initializes the LCD module. It sets the data and control pins as outputs, waits for the LCD to power up, and 
-performs the initialization sequence required by the LCD.
-
-** LCD_clear()
-This function clears the LCD display by sending the appropriate command to the LCD module.
-
-**LCD_gotoxy(uint8_t x, uint8_t y)
-This function sets the cursor position on the LCD display. It takes the x and y coordinates (zero-based) as 
-arguments and calculates the corresponding DDRAM (Display Data RAM) address to set the cursor position.
-
-** LCD_puts(const char *str)
-This function sends a null-terminated string to the LCD. It takes a pointer to a string as an argument and iterates 
-through each character, sending it to the LCD using the LCD_send_data() function.
-
-Library dependencies are avr/io.h for AVR microcontroller I/O operations and util/delay.h for creating delays in 
-microseconds and milliseconds. Additionally, it includes the LCD_3.h header file, which defines constants and pin configurations specific to the 
-LCD module being used.
-
-*/
-
-#ifndef F_CPU
-#define F_CPU 16000000UL // Replace with your desired CPU frequency in Hertz
-#endif
-
+These functions allow the microcontroller to control the LCD, sending commands to it, writing data to it, clearing its screen, and moving the cursor to 
+different positions on the screen.
+ */ 
+#include "lcd.h"
 #include <avr/io.h>
 #include <util/delay.h>
-#include "LCD_3.h"
 
-// Function to send a command to the LCD
-void LCD_send_cmd(uint8_t cmd)
-{
-	// Set RS pin LOW to indicate a command
-	LCD_DATA_PORT = cmd;
-	PORTD &= ~(1 << LCD_RS_PIN);
-
-	// Enable pulse
-	PORTD |= (1 << LCD_EN_PIN);
+void lcd_command(unsigned char cmnd) {
+	LCD_DATA_PORT = (LCD_DATA_PORT & 0x0F) | (cmnd & 0xF0); // send upper nibble
+	LCD_CONTROL_PORT &= ~(1<<RS); // RS=0, command reg.
+	LCD_CONTROL_PORT |= (1<<E); // E=1
 	_delay_us(1);
-	PORTD &= ~(1 << LCD_EN_PIN);
-
-	// Delay after each command
-	_delay_us(100);
-}
-
-// Function to send data to the LCD
-void LCD_send_data(uint8_t data)
-{
-	// Set RS pin HIGH to indicate data
-	LCD_DATA_PORT = data;
-	PORTD |= (1 << LCD_RS_PIN);
-
-	// Enable pulse
-	PORTD |= (1 << LCD_EN_PIN);
+	LCD_CONTROL_PORT &= ~(1<<E); // E=0
+	_delay_us(200);
+	LCD_DATA_PORT = (LCD_DATA_PORT & 0x0F) | (cmnd << 4); // send lower nibble
+	LCD_CONTROL_PORT |= (1<<E);
 	_delay_us(1);
-	PORTD &= ~(1 << LCD_EN_PIN);
-
-	// Delay after each data transmission
-	_delay_us(100);
-}
-
-void LCD_init()
-{
-	// Set data and control pins as output
-	LCD_DATA_DIR = 0xFF;
-	DDRD |= (1 << LCD_RS_PIN) | (1 << LCD_EN_PIN);
-
-	// Wait for LCD to power up
-	_delay_ms(20);
-
-	// Initialization sequence
-	LCD_send_cmd(LCD_CMD_FUNCTION_SET | LCD_FUNCTION_4BIT);
-	_delay_us(4500);
-
-	LCD_send_cmd(LCD_CMD_FUNCTION_SET | LCD_FUNCTION_4BIT);
-	_delay_us(150);
-
-	LCD_send_cmd(LCD_CMD_FUNCTION_SET | LCD_FUNCTION_4BIT);
-	LCD_send_cmd(LCD_CMD_FUNCTION_SET | LCD_FUNCTION_4BIT | LCD_FUNCTION_2LINE | LCD_FUNCTION_5X8FONT);
-
-	LCD_send_cmd(LCD_CMD_DISPLAY_CTRL | LCD_DISPLAY_ON);
-	LCD_send_cmd(LCD_CMD_CLEAR_DISPLAY);
-	_delay_ms(2);
-
-	LCD_send_cmd(LCD_CMD_ENTRY_MODE | LCD_ENTRY_INC);
-}
-
-void LCD_clear()
-{
-	LCD_send_cmd(LCD_CMD_CLEAR_DISPLAY);
+	LCD_CONTROL_PORT &= ~(1<<E);
 	_delay_ms(2);
 }
 
-void LCD_gotoxy(uint8_t x, uint8_t y)
-{
-	uint8_t address;
-
-	switch (y)
-	{
-		case 0:
-		address = LCD_LINE0_START + x;
-		break;
-		case 1:
-		address = LCD_LINE1_START + x;
-		break;
-		default:
-		return;
-	}
-
-	LCD_send_cmd(LCD_CMD_SET_DDRAM_ADDR | address);
+void lcd_data(unsigned char data) {
+	LCD_DATA_PORT = (LCD_DATA_PORT & 0x0F) | (data & 0xF0); // send upper nibble
+	LCD_CONTROL_PORT |= (1<<RS); // RS=1, data reg.
+	LCD_CONTROL_PORT|= (1<<E);
+	_delay_us(1);
+	LCD_CONTROL_PORT &= ~(1<<E);
+	_delay_us(200);
+	LCD_DATA_PORT = (LCD_DATA_PORT & 0x0F) | (data << 4); // send lower nibble
+	LCD_CONTROL_PORT |= (1<<E);
+	_delay_us(1);
+	LCD_CONTROL_PORT &= ~(1<<E);
+	_delay_ms(2);
 }
 
-void LCD_puts(const char *str)
-{
-	while (*str)
-	{
-		        LCD_send_data(*str);
-		        str++;
-	        }
-        }
+void lcd_init(void) {
+	LCD_DATA_DDR |= 0xF0; // make PORT data direction register output
+	LCD_CONTROL_DDR |= (1<<E) | (1<<RS); // make E and RS data direction register output
+	_delay_ms(20); // LCD Power ON delay always >15ms
+	lcd_command(0x02); // send for 4 bit initialization of LCD
+	lcd_command(0x28); // 2 line, 5*7 matrix in 4-bit mode
+	lcd_command(0x0C); // Display on cursor off
+	lcd_command(0x06); // Increment cursor (shift cursor to right)
+	lcd_command(0x01); // Clear display screen
+	_delay_ms(2);
+}
+
+void lcd_gotoxy(unsigned char x, unsigned char y) {
+	if (y == 1)
+	lcd_command(0x80 + x);
+	else if (y == 2)
+	lcd_command(0xC0 + x);
+}
+
+void lcd_puts(const char *s) {
+	while (*s)
+	lcd_data(*s++);
+}
+
+void lcd_clrscr() {
+	lcd_command(LCD_CLEAR);
+	_delay_ms(2);
+}
+
+
+
