@@ -18,12 +18,6 @@ These functions are defined in the `lcd.c` file, and they are used in the main p
 low-level details of interfacing with the LCD module.
 */
 
-/*
- * lcd.h
- *
- * Created: 7/16/2023 2:48:38 PM
- *  Author: casey
- */ 
 #ifndef LCD_H_
 #define LCD_H_
 
