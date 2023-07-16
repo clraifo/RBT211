@@ -3,7 +3,7 @@
 This `main.c` file is part of a project that implements an ultrasonic distance meter with an AVR microcontroller. The program uses an HC-SR04 ultrasonic sensor to 
 measure distance and communicates the measurement results to an LCD display and a serial monitor.
 
-Here is a step-by-step narrative of the program:
+Here is a step-by-step narrative of the program"
 
 1. **Initialization**: The program starts by defining several macros for frequency (F_CPU), baud rate for serial communication (BAUD), and digital HIGH and LOW 
 values. The necessary libraries are then included. The trigger (TRIG) and echo (ECHO) pins for the HC-SR04 ultrasonic sensor are defined as PB1 and PB2 respectively.
