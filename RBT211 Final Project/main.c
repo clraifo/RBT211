@@ -1,162 +1,128 @@
 /*
-Main.c overview
 
-This program reads output of an ultrasonic sensor and displays it on an LCD. Additionally, it features a warning 
-function that alerts the user of approaching object by increasing the brightness of an LED
+This `main.c` file is part of a project that implements an ultrasonic distance meter with an AVR microcontroller. The program uses an HC-SR04 ultrasonic sensor to 
+measure distance and communicates the measurement results to an LCD display and a serial monitor.
 
-The preprocessor directive and inclusions are all pretty standard, with the exception of two libraries included to
-control the LCD, LCD_3.c and LCD_3.c.
+Here is a step-by-step narrative of the program:
 
-Definitions of some constants follow: TRIGGER_PIN, ECHO_PIN, MAX_ECHO_DURATION, MAX_DISTANCE, ERROR_DISTANCE, 
-LED_PIN, PWM_CHANNEL, and PWM_TOP.
+1. **Initialization**: The program starts by defining several macros for frequency (F_CPU), baud rate for serial communication (BAUD), and digital HIGH and LOW 
+values. The necessary libraries are then included. The trigger (TRIG) and echo (ECHO) pins for the HC-SR04 ultrasonic sensor are defined as PB1 and PB2 respectively.
 
-** setup() 
-Sets the necessary pins as input or output, enables global interrupts, and configures Timer1 for PWM.
+2. **UART Communication Setup**: The program defines functions for initializing UART communication (`uart_init`) and for sending strings (`uart_puts`) and integers 
+(`uart_puti`, `uart_putlni`) over UART. These functions are used for sending data to the serial monitor.
 
-** measureDistance() 
-Measures the distance using the ultrasonic sensor. It sends a trigger pulse, measures the duration of the echo pulse, 
-and calculates the distance based on the pulse duration.
+3. **Pulse Reading**: The `pulseIn` function measures the duration of a HIGH or LOW pulse on a given pin. This function is used to measure the duration of the echo 
+pulse from the HC-SR04 sensor, which is proportional to the distance measured by the sensor.
 
-** main() 
-Sets the CPU frequency, initializes the LCD and system using the setup() function, and enters an infinite loop.
+4. **Main Loop**: In the `main` function, the program first initializes UART communication and the LCD display. The TRIG pin is set as output and the ECHO pin as
+input. The program then enters an infinite loop, where it triggers a measurement by sending a pulse on the TRIG pin, measures the duration of the returned echo pulse, 
+calculates the distance in centimeters and inches, and displays the results on the LCD display and the serial monitor. The loop runs continuously with a delay of 
+500 milliseconds between each measurement.
+*/ 
 
-Inside the loop, the distance is measured using the measureDistance() function.
-
-The LED brightness is adjusted based on the distance. If no object is detected (distance is ERROR_DISTANCE), the LED 
-is turned off by setting the PWM value to 0. Otherwise, the distance is mapped to the PWM range (0 to PWM_TOP) to control 
-the LED brightness.
-
-The distance is displayed on the LCD using the LCD_puts() function.
-
-A delay of 500 milliseconds is added before the next distance measurement.
-
-Controls of the LED brightness using PWM based on the measured distance from the ultrasonic sensor. 
-As an object gets closer, the LED brightness increases, and as the object moves farther away, the LED brightness decreases. 
-The distance is also displayed on the LCD for visual feedback.
-*/
-
-#ifndef F_CPU
-#define F_CPU 16000000UL // Replace with your desired CPU frequency in Hertz
-#endif
-
-#include <avr/interrupt.h>
+#define F_CPU 16000000UL
+#define BAUD 9600
+#define HIGH 1
+#define LOW 0
 #include <avr/io.h>
 #include <util/delay.h>
-#include <stdio.h>
-#include "LCD_3.h"
+#include <stdlib.h>
+#include "lcd.h"
+#include <util/setbaud.h>
 
-#define TRIGGER_PIN    2
-#define ECHO_PIN       3
-#define MAX_ECHO_DURATION 10000  // Maximum duration in microseconds for valid echo
-#define MAX_DISTANCE 400         // Maximum distance in centimeters
-#define ERROR_DISTANCE 9999      // Error value indicating an invalid or out-of-range distance
-#define LED_PIN        6         // LED pin
-#define PWM_CHANNEL    1         // PWM channel for LED control
-#define PWM_TOP        255       // PWM top value (8-bit resolution)
+#define TRIG PB1
+#define ECHO PB2
 
-void setup()
-{
-	// Initialize LCD
-	LCD_init();
+// rest of your code...
 
-	// Set trigger pin as output
-	DDRD |= (1 << TRIGGER_PIN);
-
-	// Set echo pin as input
-	DDRD &= ~(1 << ECHO_PIN);
-
-	// Set LED pin as output
-	DDRD |= (1 << LED_PIN);
-
-	// Set PWM pin as output
-	DDRD |= (1 << PD5); // Assuming OC1A pin is used for PWM
-
-	// Enable global interrupts
-	sei();
-
-	// Configure Timer1 for PWM
-	TCCR1A = (1 << COM1A1) | (1 << WGM10); // Non-inverted PWM mode, 8-bit resolution
-	TCCR1B = (1 << WGM12) | (1 << CS11);   // Fast PWM mode, prescaler 8
-	OCR1A = 0;                             // Initial PWM value
+void uart_init() {
+	UBRR0H = UBRRH_VALUE;
+	UBRR0L = UBRRL_VALUE;
+	#if USE_2X
+	UCSR0A |= _BV(U2X0);
+	#else
+	UCSR0A &= ~(_BV(U2X0));
+	#endif
+	UCSR0C = _BV(UCSZ01) | _BV(UCSZ00); // 8-bit data
+	UCSR0B = _BV(RXEN0) | _BV(TXEN0); // Enable RX and TX
 }
 
-uint16_t measureDistance()
-{
-	// Send a 10us pulse to trigger the ultrasonic sensor
-	PORTD |= (1 << TRIGGER_PIN);
-	_delay_us(10);
-	PORTD &= ~(1 << TRIGGER_PIN);
-
-	// Measure the pulse duration
-	uint32_t pulse_duration = 0;
-	while (!(PIND & (1 << ECHO_PIN)))
-	;
-	TCNT1 = 0;
-	TCCR1B |= (1 << CS10); // Start Timer1 with no prescaler
-	while (PIND & (1 << ECHO_PIN))
-	{
-		// Check if the echo pulse exceeds the maximum duration
-		if (TCNT1 > MAX_ECHO_DURATION)
-		{
-			// If the pulse exceeds the maximum duration, return an error value
-			return ERROR_DISTANCE;
-		}
+void uart_puts(char *s) {
+	while (*s) {
+		while (!(UCSR0A & _BV(UDRE0))) {} // Wait for empty transmit buffer
+		UDR0 = *s;
+		s++;
 	}
-	pulse_duration = TCNT1;
-	TCCR1B = 0; // Stop Timer1
-
-	// Calculate distance in centimeters
-	uint16_t distance = (pulse_duration * 0.034) / 2;
-
-	return distance;
 }
 
-int main()
+void uart_puti(int n) {
+	char buffer[10];
+	itoa(n, buffer, 10);
+	uart_puts(buffer);
+}
+
+void uart_putlni(int n) {
+	uart_puti(n);
+	uart_puts("\n");
+}
+
+unsigned long pulseIn(uint8_t pin, uint8_t state) {
+	uint8_t mask = (1 << pin);
+	unsigned long width = 0;
+	// Wait for any previous pulse to end
+	while ((PINB & mask) == state) {}
+	// Wait for the pulse to start
+	while ((PINB & mask) != state) {}
+	// Then wait for the pulse to stop
+	while ((PINB & mask) == state) {
+		width++;
+		_delay_us(1);
+	}
+	return width;
+}
+
+int main(void)
 {
-	// Set CPU frequency
-	CLKPR = (1 << CLKPCE);
-	CLKPR = 0;
+	char buffer[10];
+	unsigned long duration;
+	int distanceCm, distanceInch;
 
-	// Initialize LCD
-	LCD_init();
-
-	// Initialize AVR
-	setup();
-
-	while (1)
+	uart_init();  // Initialize UART for serial communication
+	lcd_init();
+	
+	DDRB |= (1<<TRIG); // Sets the TRIG_PIN as Output
+	DDRB &= ~(1<<ECHO); // Sets the ECHO_PIN as Input
+	while(1)
 	{
-		// Measure distance
-		uint16_t distance = measureDistance();
+		// Code to send the trigger pulse
+		PORTB |= (1<<TRIG);
+		_delay_us(10);
+		PORTB &= ~(1<<TRIG);
 
-		// Adjust LED brightness based on distance
-		uint8_t pwm_value = 0;
-		if (distance == ERROR_DISTANCE)
-		{
-			pwm_value = 0; // No object detected, turn off LED
-		}
-		else
-		{
-			// Map the distance range to PWM range
-			pwm_value = (uint8_t)((distance * PWM_TOP) / MAX_DISTANCE);
-		}
-		OCR1A = pwm_value; // Set PWM value
+		// Code to read the echo pulse and calculate distance
+		duration = pulseIn(ECHO, HIGH);
+		distanceCm= duration*0.034/2;
+		distanceInch = duration*0.0133/2;
 
-		// Display distance on LCD
-		char buffer[16];
-		if (distance == ERROR_DISTANCE)
-		{
-			snprintf(buffer, sizeof(buffer), "Distance: Error");
-		}
-		else
-		{
-			snprintf(buffer, sizeof(buffer), "Distance: %d cm", distance);
-		}
-		LCD_clear();
-		LCD_gotoxy(0, 0);
-		LCD_puts(buffer);
+		// Send distance to LCD
+		lcd_gotoxy(0,0);
+		lcd_puts("Dist: ");
+		lcd_puts(itoa(distanceCm, buffer, 10)); // Convert integer to string before sending to LCD.
+		lcd_puts(" cm");
+		lcd_gotoxy(0,1);
+		lcd_puts("Dist: ");
+		lcd_puts(itoa(distanceInch, buffer, 10));
+		lcd_puts(" in");
 
-		_delay_ms(500); // Wait for a while before measuring again
+		// Send distance to serial
+		uart_puts("Duration: ");
+		uart_putlni(duration);
+		uart_puts("Distance cm: ");
+		uart_putlni(distanceCm);
+		uart_puts("Distance inch: ");
+		uart_putlni(distanceInch);
+
+		_delay_ms(500);
 	}
 
-	return 0;
 }
